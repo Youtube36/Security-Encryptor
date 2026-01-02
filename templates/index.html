@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>CipherHub Lite | encrizh</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+</head>
+<body>
+    <div style="max-width: 1000px; margin: auto;">
+        <h1><i class="fas fa-user-secret"></i> CIPHERHUB PRO</h1>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+            <div class="glass-card">
+                <h3><i class="fas fa-network-wired"></i> NETWORK & GEO</h3>
+                <div style="font-size: 11px;">
+                    IP: <span id="ip">...</span> | ISP: <span id="isp">...</span><br>
+                    LOC: <span id="loc">...</span>
+                </div>
+                <div id="map"></div>
+                <button class="btn-cyber" onclick="getLocation()" style="margin-top:10px;">AUTHORIZE GPS</button>
+            </div>
+
+            <div class="glass-card" id="encrypt-panel">
+                <div class="scan-line" id="laser"></div>
+                <h3><i class="fas fa-lock"></i> ENCRYPTION</h3>
+                <select id="algo">
+                    <option value="shift">Shift + Base64</option>
+                    <option value="vigenere">Vigenere + Base64</option>
+                    <option value="rsa">RSA-2048 + Base64</option>
+                </select>
+                <textarea id="msg" rows="3" placeholder="Mesej rahsia..."></textarea>
+                <button class="btn-cyber" onclick="runProcess()">EXECUTE</button>
+                <div id="out" style="word-break:break-all; font-size:12px; margin-top:10px; color:var(--neon);">...</div>
+            </div>
+        </div>
+
+        <div class="glass-card">
+            <h3><i class="fas fa-terminal"></i> SYSTEM LOGS</h3>
+            <div id="terminal">> System initialized as 'encrizh'...</div>
+        </div>
+    </div>
+
+    <a href="https://wa.me/601163903915" class="wa-float" target="_blank"><i class="fab fa-whatsapp"></i></a>
+
+    <script>
+        let map, marker;
+        window.onload = async () => {
+            map = L.map('map').setView([4.21, 101.97], 5);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+            const res = await fetch('/get_network');
+            const data = await res.json();
+            document.getElementById('ip').innerText = data.ip;
+            document.getElementById('isp').innerText = data.isp;
+            document.getElementById('loc').innerText = `${data.city}, ${data.country}`;
+        };
+
+        function getLocation() {
+            navigator.geolocation.getCurrentPosition(pos => {
+                const {latitude, longitude} = pos.coords;
+                map.setView([latitude, longitude], 15);
+                if(marker) marker.setLatLng([latitude, longitude]);
+                else marker = L.marker([latitude, longitude]).addTo(map).bindPopup('encrizh Node Active').openPopup();
+                document.getElementById('terminal').innerHTML += `<br>> [GEO] Verified: ${latitude}, ${longitude}`;
+            });
+        }
+
+        async function runProcess() {
+            const msg = document.getElementById('msg').value;
+            const algo = document.getElementById('algo').value;
+            const laser = document.getElementById('laser');
+            
+            laser.style.display = 'block';
+            laser.style.animation = 'scanAnim 1.5s infinite';
+            
+            const resp = await fetch('/execute', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                body: `message=${encodeURIComponent(msg)}&algo=${algo}`
+            });
+            const d = await resp.json();
+            
+            setTimeout(() => {
+                laser.style.display = 'none';
+                document.getElementById('out').innerText = d.result;
+                document.getElementById('terminal').innerHTML += `<br>> [${algo}] Success in ${d.speed}. Hash: ${d.hash.substring(0,10)}...`;
+            }, 1500);
+        }
+    </script>
+</body>
+</html>
